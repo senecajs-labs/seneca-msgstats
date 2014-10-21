@@ -1,0 +1,32 @@
+{
+  "name": "seneca-msgstats",
+  "version": "0.1.0",
+  "description": "Seneca message statistics.",
+  "main": "msgstats.js",
+  "scripts": {
+    "test": "node_modules/.bin/mocha test/*.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rjrodger/seneca-msgstats.git"
+  },
+  "keywords": [
+    "seneca",
+    "msgstats",
+    "plugin"
+  ],
+  "contributors": [
+    "Richard Rodger (http://richardrodger.com/)",
+    "David Cahill"
+  ],
+  "license": "MIT",
+  "dependencies": {
+  },
+  "peerDependencies": {
+    "seneca": "*"
+  },
+  "devDependencies": {
+    "mocha": "~1.20.1",
+    "seneca": "~0.5.21"
+  }
+}
