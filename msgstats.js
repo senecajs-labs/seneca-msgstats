@@ -19,13 +19,26 @@ module.exports = function msgstats( options ) {
     stats:{
       size:1111,
       interval:1000
+    },
+    ratios:[],
+    udp:{
+      host:'localhost',
+      port:40404
+    },
+    influx:{
+      host:'localhost',
+      port:'8086',
+      username:'msgstats',
+      password:'msgstats',
+      database:'seneca_msgstats'
     }
   }, options);
 
 
   var txrx      = options.txrx || make_udp_txrx()
-  var aggregate = options.aggregate || make_influx_aggregate()
+  var aggregate = make_ratios( options.aggregate || make_influx_aggregate() )
   var counts    = stats.NamedStats( options.stats.size, options.stats.interval)
+  var rstats    = stats.NamedStats( options.stats.size, options.stats.interval)
 
   
   seneca.add({init:plugin},function( msg, done ){
@@ -40,7 +53,7 @@ module.exports = function msgstats( options ) {
     
       pins.forEach(function(pin){
         seneca.sub(pin,function(msg){
-          counts.point(1,msg.meta$.pattern)
+          counts.point(1,msg.meta$.sub)
         })
       })
 
@@ -54,6 +67,7 @@ module.exports = function msgstats( options ) {
   function start_transmit() {
     setInterval(function(){
       var latest = counts.calculate()
+
       txrx.transmit({
         id:    seneca.id,
         when:  Date.now(),
@@ -70,7 +84,7 @@ module.exports = function msgstats( options ) {
       transmit: function( msg ){
         var data = new Buffer(JSON.stringify(msg))
         client.send(
-          data, 0, data.length, 43333, '127.0.0.1', 
+          data, 0, data.length, options.udp.port, options.udp.host, 
           function(err) {
             if (err) console.log(err)
           })
@@ -83,10 +97,12 @@ module.exports = function msgstats( options ) {
           try {
             aggregate( JSON.parse(msg) )
           }
-          catch(e){}
+          catch(e){
+            console.log(e.stack)
+          }
         })
 
-        server.bind(43333,'127.0.0.1')
+        server.bind(options.udp.port,options.udp.host)
       }
     }
 
@@ -95,25 +111,62 @@ module.exports = function msgstats( options ) {
 
 
   function make_influx_aggregate( msg ) {
-    var client = influx({
-      host:'localhost',
-      port:8086,
-      username:'u0',
-      password:'u0',
-      database:'t0'
-    })
+    var client = influx(options.influx)
     
-    return function( msg ) {
+    return function( msg, ratios ) {
       var stats = msg.stats || {}
       var series = {}
       for( var p in stats ) {
-        series[p]=[[{c:stats[p].count}]]
+        series[p]=[[{c:stats[p].sum}]]
       }
       client.writeSeries(series,function(err){
         if(err) return console.log(err)
       })
+
+      if( Object.keys(ratios) ) {
+        client.writeSeries(ratios,function(err){
+          if(err) return console.log(err)
+        })
+      }
     }
   }
 
+  function make_ratios( aggregate ) {
+    return function( msg ) {
+      
+      if( options.ratios ) {
+
+        var ratios = {}, z = {sum:null}
+        for( var i = 0; i < options.ratios.length; i++ ) {
+          var ratio = options.ratios[i]
+          
+          var r0 = (msg.stats[ratio[0]]||z).sum
+          var r1 = (msg.stats[ratio[1]]||z).sum
+
+          if( null != r0 ) rstats.point(r0,ratio[0])
+          if( null != r1 ) rstats.point(r1,ratio[1])
+        }
+
+        var rs = rstats.calculate()
+
+        for( var i = 0; i < options.ratios.length; i++ ) {
+          var ratio = options.ratios[i]
+
+          var r = (rs[ratio[1]] && rs[ratio[1]].sum && rs[ratio[0]]) ? 
+                rs[ratio[0]].sum / rs[ratio[1]].sum : 0
+
+
+          if( !isNaN(r) ) {
+            var rn = ratio[0]+'~'+ratio[1]
+            rstats.point(r,rn)
+            r = rstats.calculate()[rn].mean
+            ratios[rn]=[[{r:r}]]
+          }
+        }
+      }
+
+      aggregate( msg, ratios )
+    }
+  }
 }
 
