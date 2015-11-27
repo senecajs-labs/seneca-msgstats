@@ -1,21 +1,10 @@
-/* Copyright (c) 2014 Richard Rodger, MIT License */
-"use strict";
+'use strict'
 
+var Lab = require('lab')
+var Seneca = require('seneca')
 
-var seneca = require('seneca')({log:'silent'});
-seneca.use('..');
+var lab = exports.lab = Lab.script()
+var describe = lab.describe
 
-var assert = require('assert');
-
-describe('msgstats', function() {
-
-  it('happy',function(done){
-    seneca.act('role:msgstats,ping:true',function(err,out){
-      if(err) return done(err);
-
-      assert.ok( out.now )
-      done()
-    })
-  });
-
+describe('Dummy Test', function (done) {
 })

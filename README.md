@@ -1,34 +1,16 @@
+![Seneca](http://senecajs.org/files/assets/seneca-logo.png)
+> A [Seneca.js][] message stats producer and collector
+
 # seneca-msgstats
+[![Build Status][travis-badge]][travis-url]
+[![Gitter][gitter-badge]][gitter-url]
 
-### Node.js Seneca Message Statistics
+A producer and collector of message stats for [Seneca.js][].
 
-This module is a plugin for the [Seneca
-framework](http://senecajs.org). It provides a message throughput statistics.
-
-[![Build Status](https://travis-ci.org/rjrodger/seneca-msgstats.png?branch=master)](https://travis-ci.org/rjrodger/seneca-msgstats)
-
-[![NPM](https://nodei.co/npm/seneca-msgstats.png)](https://nodei.co/npm/seneca-msgstats/)
-[![NPM](https://nodei.co/npm-dl/seneca-msgstats.png)](https://nodei.co/npm-dl/seneca-msgstats/)
-
-For a gentle introduction to Seneca itself, see the
-[senecajs.org](http://senecajs.org) site.
-
-If you're using this plugin module, feel free to contact me on twitter if you
-have any questions! :) [@rjrodger](http://twitter.com/rjrodger)
-
-
-Current Version: 0.1.0
-
-Tested on: Seneca 0.5.21, Node 0.10.31
-
-
-### Quick example
-
-
-```JavaScript
-var seneca = require('seneca')();
-seneca.use('msgstats');
-```
+- __Version:__ 0.1.0
+- __Tested on:__ Seneca 0.7
+- __Node:__ 0.10, 0.12, 4
+- __License:__ [MIT][]
 
 ## Install
 
@@ -37,27 +19,72 @@ npm install seneca
 npm install seneca-msgstats
 ```
 
-## Message Patterns
+#### Running Influxdb
+For simplicities sake, we provide a an npm command to spin up an influx container,
 
-Foo.
+```
+npm run db
+```
 
-   * `role:msgstats, cmd:foo` foo
+You can also access the underlying shell script if you are consuming this module by
+running,
 
-Bar.
+```
+sh ./node_modules/seneca-msgstats/misc/rundb.sh
+```
 
-### Options
+__Please note:__
 
-```JavaScript
+ - You must have docker installed and working in your terminal
+ - This functionality will not work on windows as it requires sh :(
+ - Each time you run this command it will delete your existing db and restart
+
+### Quick example
+
+
+```js
+var seneca = require('seneca')()
+
+// These are the default options
+// if you do not pass any.
 seneca.use('msgstats', {
-  foo:'bar'
-});
+  pin: '',
+  collect: false,
+  interval: 1000,
+  stats:{
+    size: 1111,
+    interval: 1000
+  },
+  ratios: [],
+  udp: {
+    host: 'localhost',
+    port: 40404
+  },
+  influx:{
+    host: 'localhost',
+    port: '8086',
+    username: 'msgstats',
+    password: 'msgstats',
+    database: 'seneca_msgstats'
+  }
+})
 ```
 
+## Contributing
+The [Senecajs org][] encourage open participation. If you feel you can help in any way, be it with
+documentation, examples, extra testing, or new features please get in touch.
 
+## License
+Copyright Richard Rodger and other contributors 2015, Licensed under [MIT][].
 
-## Test
+[travis-badge]: https://travis-ci.org/rjrodger/seneca-msgstats.svg
+[travis-url]: https://travis-ci.org/rjrodger/seneca-msgstats
+[gitter-badge]: https://badges.gitter.im/Join%20Chat.svg
+[gitter-url]: https://gitter.im/senecajs/seneca
 
-```bash
-mocha test/*.test.js
-```
-
+[MIT]: ./LICENSE
+[Senecajs org]: https://github.com/senecajs/
+[Seneca.js]: https://www.npmjs.com/package/seneca
+[senecajs.org]: http://senecajs.org/
+[github issue]: https://github.com/rjrodger/seneca-msgstats/issues
+[@senecajs]: http://twitter.com/senecajs
