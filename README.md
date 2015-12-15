@@ -5,10 +5,14 @@
 [![Build Status][travis-badge]][travis-url]
 [![Gitter][gitter-badge]][gitter-url]
 
-A producer and collector of message stats for [Seneca.js][].
+A producer and collector of stats for [Seneca.js][]. This module generates metrics on an interval emits
+them over UDP. Can optionally be used as a collector micro-service with the ability to save metrics to
+Influxdb. Collectors work over UDP and can handle messages from other services.
+
+An example system with the nessecery docker configuration can be found in [/eg](./eg)
 
 - __Version:__ 0.1.0
-- __Tested on:__ Seneca 0.7
+- __Tested on:__ Seneca 0.7, 0.8, 0.9
 - __Node:__ 0.10, 0.12, 4
 - __License:__ [MIT][]
 
@@ -20,24 +24,7 @@ npm install seneca-msgstats
 ```
 
 #### Running Influxdb
-For simplicities sake, we provide a an npm command to spin up an influx container,
 
-```
-npm run db
-```
-
-You can also access the underlying shell script if you are consuming this module by
-running,
-
-```
-sh ./node_modules/seneca-msgstats/misc/rundb.sh
-```
-
-__Please note:__
-
- - You must have docker installed and working in your terminal
- - This functionality will not work on windows as it requires sh :(
- - Each time you run this command it will delete your existing db and restart
 
 ### Quick example
 
@@ -45,30 +32,57 @@ __Please note:__
 ```js
 var seneca = require('seneca')()
 
-// These are the default options
-// if you do not pass any.
+// Set up a collector
 seneca.use('msgstats', {
-  pin: '',
-  collect: false,
-  interval: 1000,
-  stats:{
+  collect: true,
+  capture.msg: true, // true by default
+  capture.mem: true, // false by default
+})
+
+// Set up a single pin emitter
+seneca.use('msgstats', {
+  pin: {role: 'foo', cmd: 'bar'}
+})
+
+// Using multiple pins with a single emitter
+seneca.use('msgstats', {
+  pins: [
+    {role: 'foo', cmd: 'bar'},
+    {role: 'bar', cmd: 'foo'}
+]})
+```
+
+### Options
+
+```js
+{
+  tag: seneca.options().tag,     // Tag stored stats
+  pid: process.pid,              // Pid stored with stats
+  pin: '',                       // The pin to listen for
+  interval: 1000,                // Emit interval (1/sec)
+  stats: {                       // Options for rolling-stats
     size: 1111,
     interval: 1000
   },
-  ratios: [],
+  capture: {                     // Turn on and off capture
+    mem: true,                   // Capture mem stats
+    msg: true                    // Capture msg stats
+  },
+  ratios: [],                    // Calculate ratios (unfinished)
   udp: {
-    host: 'localhost',
-    port: 40404
+    host:'localhost',            // UDP host to send / receive on
+    port:40404                   // UDP port to send / receive on
   },
   influx:{
-    host: 'localhost',
-    port: '8086',
-    username: 'msgstats',
-    password: 'msgstats',
-    database: 'seneca_msgstats'
+    host:'localhost',            // Host Influx listens on
+    port:'8086',                 // Port Influx listens on
+    username:'msgstats',         // Username for DB
+    password:'msgstats',         // Password for DB
+    database:'seneca_msgstats'   // Name of DB
   }
-})
+}
 ```
+
 
 ## Contributing
 The [Senecajs org][] encourage open participation. If you feel you can help in any way, be it with

@@ -4,8 +4,7 @@
   "description": "Seneca message statistics.",
   "main": "msgstats.js",
   "scripts": {
-    "test": "lab test/*.test.js -r console -v -m 3000",
-    "db": "sh ./misc/rundb.sh"
+    "test": "lab test/*.test.js -r console -v -m 3000"
   },
   "repository": {
     "type": "git",

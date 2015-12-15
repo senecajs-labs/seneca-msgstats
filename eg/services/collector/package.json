@@ -1,0 +1,9 @@
+{
+  "name": "collector",
+  "main": "collector.js",
+  "private": "true",
+  "license": "MIT",
+  "devDependencies": {
+    "seneca": "plugin"
+  }
+}
