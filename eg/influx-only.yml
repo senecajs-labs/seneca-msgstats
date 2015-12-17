@@ -1,0 +1,9 @@
+influx:
+  image: tutum/influxdb:0.9
+  ports:
+    - 8086:8086
+    - 8083:8083
+  environment:
+    - PRE_CREATE_DB="seneca_msgstats"
+    - ADMIN_USER="msgstats"
+    - INFLUXDB_INIT_PWD="msgstats"

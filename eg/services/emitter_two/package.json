@@ -1,0 +1,8 @@
+{
+  "name": "emitter_two",
+  "main": "emitter_two.js",
+  "private": "true",
+  "devDependencies": {
+    "seneca": "plugin"
+  }
+}

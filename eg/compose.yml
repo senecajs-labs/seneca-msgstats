@@ -1,0 +1,18 @@
+influx:
+  image: tutum/influxdb:0.9
+  ports:
+    - 8086:8086
+    - 8083:8083
+  environment:
+    - PRE_CREATE_DB="seneca_msgstats"
+    - ADMIN_USER="msgstats"
+    - INFLUXDB_INIT_PWD="msgstats"
+collector:
+  build: services/collector/
+  container_name: collector
+emitter_one:
+  build: services/emitter_one/
+  container_name: emitter_one
+emitter_two:
+  build: services/emitter_two/
+  container_name: emitter_two

@@ -1,0 +1,9 @@
+{
+  "name": "emitter_one",
+  "main": "emitter_one.js",
+  "private": "true",
+  "license": "MIT",
+  "devDependencies": {
+    "seneca": "plugin"
+  }
+}
