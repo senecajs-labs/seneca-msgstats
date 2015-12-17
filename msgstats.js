@@ -1,4 +1,5 @@
-'use strict'
+/* Copyright (c) 2014-2015 Richard Rodger, MIT License */
+"use strict";
 
 
 var dgram = require('dgram')
@@ -6,22 +7,18 @@ var dgram = require('dgram')
 var stats  = require('rolling-stats')
 var influx = require('influx')
 
+
+
 module.exports = function msgstats( options ) {
   var seneca = this
   var plugin = 'msgstats'
 
   options = seneca.util.deepextend({
-    tag: seneca.options().tag,
-    pid: process.pid,
     pin: '',
     interval:1000,
     stats:{
       size:1111,
       interval:1000
-    },
-    capture: {
-      mem: true,
-      msg: true
     },
     ratios:[],
     udp:{
@@ -43,8 +40,8 @@ module.exports = function msgstats( options ) {
   var counts    = stats.NamedStats( options.stats.size, options.stats.interval)
   var rstats    = stats.NamedStats( options.stats.size, options.stats.interval)
 
-
-  seneca.add({init:plugin}, function(msg, done) {
+  
+  seneca.add({init:plugin},function( msg, done ){
     var seneca = this
 
     if( options.collect ) {
@@ -53,10 +50,10 @@ module.exports = function msgstats( options ) {
     else {
       var pin  = options.pin || options.pins || null
       var pins = Array.isArray(pin) ? pin : [pin]
-
+    
       pins.forEach(function(pin){
         seneca.sub(pin,function(msg){
-          counts.point(1, msg.meta$.sub)
+          counts.point(1,msg.meta$.sub)
         })
       })
 
@@ -66,18 +63,15 @@ module.exports = function msgstats( options ) {
     done()
   })
 
-
+  
   function start_transmit() {
     setInterval(function(){
-      var msg_stats = counts.calculate()
-      var mem_stats = process.memoryUsage()
+      var latest = counts.calculate()
 
       txrx.transmit({
-        pid: options.pid,
-        tag: options.tag,
-        when: Date.now(),
-        msg_stats: msg_stats,
-        mem_stats: mem_stats
+        id:    seneca.id,
+        when:  Date.now(),
+        stats: latest
       })
     },options.interval)
   }
@@ -90,7 +84,7 @@ module.exports = function msgstats( options ) {
       transmit: function( msg ){
         var data = new Buffer(JSON.stringify(msg))
         client.send(
-          data, 0, data.length, options.udp.port, options.udp.host,
+          data, 0, data.length, options.udp.port, options.udp.host, 
           function(err) {
             if (err) console.log(err)
           })
@@ -116,49 +110,22 @@ module.exports = function msgstats( options ) {
   }
 
 
-  function make_influx_aggregate (msg) {
+  function make_influx_aggregate( msg ) {
     var client = influx(options.influx)
-
-    return function (msg, ratios) {
+    
+    return function( msg, ratios ) {
+      var stats = msg.stats || {}
       var series = {}
-
-      if (options.capture.mem) {
-        var stats = msg.mem_stats || {}
-        series.mem_stats = []
-
-        series.mem_stats.push([
-          {available: stats.heapTotal, used: stats.heapUsed},
-          {pid: msg.pid, tag: msg.tag}
-        ])
+      for( var p in stats ) {
+        series[p]=[[{c:stats[p].sum}]]
       }
-
-      if (options.capture.msg) {
-        var stats = msg.msg_stats || {}
-        series.msg_stats = []
-
-        for(var pin in stats) {
-          var count = stats[pin].sum
-          pin = pin.replace(',', '_')
-
-          series.msg_stats.push([
-            {count: count},
-            {pin: pin, pid: msg.pid, tag: msg.tag}
-          ])
-        }
-      }
-
-      client.writeSeries(series, function (err) {
-        if (err) {
-          return seneca.log.error(err)
-        }
+      client.writeSeries(series,function(err){
+        if(err) return console.log(err)
       })
 
-      // Should be options.stats.ratios ?
-      if (Object.keys(ratios)) {
-        client.writeSeries(ratios, function (err) {
-          if (err) {
-            return seneca.log.error(err)
-          }
+      if( Object.keys(ratios) ) {
+        client.writeSeries(ratios,function(err){
+          if(err) return console.log(err)
         })
       }
     }
@@ -166,13 +133,12 @@ module.exports = function msgstats( options ) {
 
   function make_ratios( aggregate ) {
     return function( msg ) {
-
+      
       if( options.ratios ) {
-
         var ratios = {}, z = {sum:null}
         for( var i = 0; i < options.ratios.length; i++ ) {
           var ratio = options.ratios[i]
-
+          
           var r0 = (msg.stats[ratio[0]]||z).sum
           var r1 = (msg.stats[ratio[1]]||z).sum
 
@@ -185,7 +151,7 @@ module.exports = function msgstats( options ) {
         for( var i = 0; i < options.ratios.length; i++ ) {
           var ratio = options.ratios[i]
 
-          var r = (rs[ratio[1]] && rs[ratio[1]].sum && rs[ratio[0]]) ?
+          var r = (rs[ratio[1]] && rs[ratio[1]].sum && rs[ratio[0]]) ? 
                 rs[ratio[0]].sum / rs[ratio[1]].sum : 0
 
 
@@ -202,3 +168,4 @@ module.exports = function msgstats( options ) {
     }
   }
 }
+
