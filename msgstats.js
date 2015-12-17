@@ -150,19 +150,19 @@ module.exports = function msgstats( options ) {
       }
 
       if (Object.keys(ratios)) {
+        series.msg_ratios = []
         for( var rn in ratios ) {
           var nice_rn = rn.replace(/[,~]/g,'_')
-          
+
           var point = [
             {count: ratios[rn].sum},
             {pin: nice_rn, pid: msg.pid, tag: msg.tag}
           ]
 
-          series.msg_stats.push(point)
-
+          series.msg_ratios.push(point)
         }
       }
-      
+
 
       client.writeSeries(series, function (err) {
         if (err) {
@@ -181,7 +181,7 @@ module.exports = function msgstats( options ) {
         var ratios = {}, z = {count:null}
         for( var i = 0; i < options.ratios.length; i++ ) {
           var ratio = options.ratios[i]
-          
+
           var r0 = (msg.msg_stats[ratio[0]]||z).count
           var r1 = (msg.msg_stats[ratio[1]]||z).count
 
