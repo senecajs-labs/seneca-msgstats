@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>msgstats.js</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>msgstats.js</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              
+            </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-meta">'use strict'</span>
+
+
+<span class="hljs-keyword">var</span> dgram = <span class="hljs-built_in">require</span>(<span class="hljs-string">'dgram'</span>)
+
+<span class="hljs-keyword">var</span> stats  = <span class="hljs-built_in">require</span>(<span class="hljs-string">'rolling-stats'</span>)
+<span class="hljs-keyword">var</span> influx = <span class="hljs-built_in">require</span>(<span class="hljs-string">'influx'</span>)
+
+<span class="hljs-built_in">module</span>.exports = <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">msgstats</span>(<span class="hljs-params"> options </span>) </span>{
+  <span class="hljs-keyword">var</span> seneca = <span class="hljs-keyword">this</span>
+  <span class="hljs-keyword">var</span> plugin = <span class="hljs-string">'msgstats'</span>
+
+  options = seneca.util.deepextend({
+    tag: seneca.options().tag,
+    pid: process.pid,
+    pin: <span class="hljs-string">''</span>,
+    interval:<span class="hljs-number">1000</span>,
+    stats:{
+      size:<span class="hljs-number">1111</span>,
+      interval:<span class="hljs-number">1000</span>
+    },
+    capture: {
+      mem: <span class="hljs-literal">true</span>,
+      msg: <span class="hljs-literal">true</span>
+    },
+    ratios:[],
+    udp:{
+      host:<span class="hljs-string">'localhost'</span>,
+      port:<span class="hljs-number">40404</span>
+    },
+    influx:{
+      host:<span class="hljs-string">'localhost'</span>,
+      port:<span class="hljs-string">'8086'</span>,
+      username:<span class="hljs-string">'msgstats'</span>,
+      password:<span class="hljs-string">'msgstats'</span>,
+      database:<span class="hljs-string">'seneca_msgstats'</span>
+    }
+  }, options)
+
+
+  <span class="hljs-keyword">var</span> txrx      = options.txrx || make_udp_txrx()
+  <span class="hljs-keyword">var</span> aggregate = make_ratios( options.aggregate || make_influx_aggregate() )
+  <span class="hljs-keyword">var</span> counts    = stats.NamedStats( options.stats.size, options.stats.interval)
+  <span class="hljs-keyword">var</span> rstats    = stats.NamedStats( options.stats.size, options.stats.interval)
+
+
+  seneca.add({init:plugin}, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">msg, done</span>) </span>{
+    <span class="hljs-keyword">var</span> seneca = <span class="hljs-keyword">this</span>
+
+    <span class="hljs-keyword">if</span>( options.collect ) {
+      txrx.receive( aggregate )
+    }
+    <span class="hljs-keyword">else</span> {
+      <span class="hljs-keyword">var</span> pin  = options.pin || options.pins || <span class="hljs-literal">null</span>
+      <span class="hljs-keyword">var</span> pins = <span class="hljs-built_in">Array</span>.isArray(pin) ? pin : [pin]
+
+      pins.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">pin</span>)</span>{
+        seneca.sub(pin,<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">msg</span>)</span>{
+          counts.point(<span class="hljs-number">1</span>, msg.meta$.sub)
+        })
+      })
+
+      start_transmit()
+    }
+
+    done()
+  })
+
+
+  <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">start_transmit</span>(<span class="hljs-params"></span>) </span>{
+    setInterval(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>)</span>{
+      <span class="hljs-keyword">var</span> msg_stats = counts.calculate()
+      <span class="hljs-keyword">var</span> mem_stats = process.memoryUsage()
+
+      txrx.transmit({
+        pid: options.pid,
+        tag: options.tag,
+        when: <span class="hljs-built_in">Date</span>.now(),
+        msg_stats: msg_stats,
+        mem_stats: mem_stats
+      })
+    },options.interval)
+  }
+
+
+  <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">make_udp_txrx</span>(<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">var</span> client = dgram.createSocket(<span class="hljs-string">'udp4'</span>)
+
+    <span class="hljs-keyword">var</span> udp_txrx = {
+      transmit: <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"> msg </span>)</span>{
+        <span class="hljs-keyword">var</span> data = <span class="hljs-keyword">new</span> Buffer(<span class="hljs-built_in">JSON</span>.stringify(msg))
+        client.send(
+          data, <span class="hljs-number">0</span>, data.length, options.udp.port, options.udp.host,
+          <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">err</span>) </span>{
+            <span class="hljs-keyword">if</span> (err) <span class="hljs-built_in">console</span>.log(err)
+          })
+      },
+
+      receive: <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"> aggregate </span>)</span>{
+        <span class="hljs-keyword">var</span> server = dgram.createSocket(<span class="hljs-string">'udp4'</span>)
+
+        server.on(<span class="hljs-string">'message'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"> msg, remote </span>) </span>{
+          <span class="hljs-keyword">try</span> {
+            aggregate( <span class="hljs-built_in">JSON</span>.parse(msg) )
+          }
+          <span class="hljs-keyword">catch</span>(e){
+            <span class="hljs-built_in">console</span>.log(e.stack)
+          }
+        })
+
+        server.bind(options.udp.port,options.udp.host)
+      }
+    }
+
+    <span class="hljs-keyword">return</span> udp_txrx
+  }
+
+
+  <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">make_influx_aggregate</span> (<span class="hljs-params">msg</span>) </span>{
+    <span class="hljs-keyword">var</span> client = influx(options.influx)
+
+    <span class="hljs-keyword">return</span> <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">msg, ratios</span>) </span>{
+      <span class="hljs-keyword">var</span> series = {}
+
+      <span class="hljs-keyword">if</span> (options.capture.mem) {
+        <span class="hljs-keyword">var</span> stats = msg.mem_stats || {}
+        series.mem_stats = []
+
+        series.mem_stats.push([
+          {available: stats.heapTotal, used: stats.heapUsed},
+          {pid: msg.pid, tag: msg.tag}
+        ])
+      }
+
+      <span class="hljs-keyword">if</span> (options.capture.msg) {
+        <span class="hljs-keyword">var</span> stats = msg.msg_stats || {}
+        series.msg_stats = []
+
+        <span class="hljs-keyword">for</span>(<span class="hljs-keyword">var</span> pin <span class="hljs-keyword">in</span> stats) {
+          <span class="hljs-keyword">var</span> count = stats[pin].sum
+          pin = pin.replace(<span class="hljs-string">','</span>, <span class="hljs-string">'_'</span>)
+
+          <span class="hljs-keyword">var</span> point = [
+            {count: count},
+            {pin: pin, pid: msg.pid, tag: msg.tag}
+          ]
+
+          series.msg_stats.push(point)
+        }
+      }
+
+      <span class="hljs-keyword">if</span> (<span class="hljs-built_in">Object</span>.keys(ratios)) {
+        series.msg_ratios = []
+        <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> rn <span class="hljs-keyword">in</span> ratios ) {
+          <span class="hljs-keyword">var</span> nice_rn = rn.replace(<span class="hljs-regexp">/[,~]/g</span>,<span class="hljs-string">'_'</span>)
+
+          <span class="hljs-keyword">var</span> point = [
+            {count: ratios[rn].sum},
+            {pin: nice_rn, pid: msg.pid, tag: msg.tag}
+          ]
+
+          series.msg_ratios.push(point)
+        }
+      }
+
+
+      client.writeSeries(series, <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">err</span>) </span>{
+        <span class="hljs-keyword">if</span> (err) {
+          <span class="hljs-keyword">return</span> seneca.log.error(err)
+        }
+      })
+
+    }
+  }
+
+  <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">make_ratios</span>(<span class="hljs-params"> aggregate </span>) </span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"> msg </span>) </span>{
+
+      <span class="hljs-keyword">if</span>( options.ratios ) {
+
+        <span class="hljs-keyword">var</span> ratios = {}, z = {count:<span class="hljs-literal">null</span>}
+        <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; options.ratios.length; i++ ) {
+          <span class="hljs-keyword">var</span> ratio = options.ratios[i]
+
+          <span class="hljs-keyword">var</span> r0 = (msg.msg_stats[ratio[<span class="hljs-number">0</span>]]||z).count
+          <span class="hljs-keyword">var</span> r1 = (msg.msg_stats[ratio[<span class="hljs-number">1</span>]]||z).count
+
+          <span class="hljs-keyword">if</span>( <span class="hljs-literal">null</span> != r0 ) rstats.point(r0,ratio[<span class="hljs-number">0</span>])
+          <span class="hljs-keyword">if</span>( <span class="hljs-literal">null</span> != r1 ) rstats.point(r1,ratio[<span class="hljs-number">1</span>])
+        }
+
+        <span class="hljs-keyword">var</span> rs = rstats.calculate()
+
+        <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>; i &lt; options.ratios.length; i++ ) {
+          <span class="hljs-keyword">var</span> ratio = options.ratios[i]
+
+          <span class="hljs-keyword">var</span> r = (rs[ratio[<span class="hljs-number">1</span>]] &amp;&amp; rs[ratio[<span class="hljs-number">1</span>]].sum &amp;&amp; rs[ratio[<span class="hljs-number">0</span>]]) ?
+                rs[ratio[<span class="hljs-number">0</span>]].sum / rs[ratio[<span class="hljs-number">1</span>]].sum : <span class="hljs-number">0</span>
+
+
+          <span class="hljs-keyword">if</span>( !<span class="hljs-built_in">isNaN</span>(r) ) {
+            <span class="hljs-keyword">var</span> rn = ratio[<span class="hljs-number">0</span>]+<span class="hljs-string">'~'</span>+ratio[<span class="hljs-number">1</span>]
+            rstats.point(r,rn)
+            r = rstats.calculate()[rn].mean</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>ratios[rn]=[[{r:r}]]</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>            ratios[rn]={sum:r}
+          }
+        }
+      }
+
+      aggregate( msg, ratios )
+    }
+  }
+}</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>
