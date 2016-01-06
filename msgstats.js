@@ -89,8 +89,7 @@ module.exports = function msgstats( options ) {
     var udp_txrx = {
       transmit: function( msg ){
         var data = new Buffer(JSON.stringify(msg))
-        client.send(
-          data, 0, data.length, options.udp.port, options.udp.host,
+        client.send(data, 0, data.length, options.udp.port, options.udp.host,
           function(err) {
             if (err) console.log(err)
           })
