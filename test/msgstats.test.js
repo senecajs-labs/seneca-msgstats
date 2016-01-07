@@ -4,7 +4,7 @@ var Lab = require('lab')
 var Seneca = require('seneca')
 var MsgStats = require('../msgstats.js')
 var Code = require('code')
-var Dgram = require('dgram');
+var Dgram = require('dgram')
 
 var lab = exports.lab = Lab.script()
 
@@ -13,10 +13,10 @@ var test = lab.test
 var before = lab.before
 var expect = Code.expect
 
-Seneca.use(MsgStats, { collect: false })
+Seneca.use(MsgStats, {collect: false})
 
-var PORT = 40404;
-var HOST = 'localhost';
+var PORT = 40404
+var HOST = 'localhost'
 
 suite('simple collector tests', function () {
   before({}, function (done) {
@@ -44,14 +44,14 @@ suite('simple collector tests', function () {
         })
 
       // create socket to listen on emitted messages
-      var server = Dgram.createSocket('udp4');
+      var server = Dgram.createSocket('udp4')
 
       server.on('message', function (message, remote) {
         expect(message).to.exist()
-        expect(message).to.be.an.buffer();
-      });
+        expect(message).to.be.an.buffer()
+      })
 
-      server.bind(PORT, HOST);
+      server.bind(PORT, HOST)
 
       function emit () {
         seneca.act({role: 'emitter', cmd: 'one'})
@@ -60,6 +60,5 @@ suite('simple collector tests', function () {
 
       emit()
     })
-
   })
 })
