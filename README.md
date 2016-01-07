@@ -23,6 +23,13 @@ npm install seneca
 npm install seneca-msgstats
 ```
 
+## Test
+To run tests, simply use npm:
+
+```sh
+npm run test
+```
+
 #### Running Influxdb
 
 
