@@ -91,8 +91,8 @@ documentation, examples, extra testing, or new features please get in touch.
 ## License
 Copyright Richard Rodger and other contributors 2015, Licensed under [MIT][].
 
-[travis-badge]: https://travis-ci.org/rjrodger/seneca-msgstats.svg
-[travis-url]: https://travis-ci.org/rjrodger/seneca-msgstats
+[travis-badge]: https://travis-ci.org/senecajs/seneca-msgstats.svg
+[travis-url]: https://travis-ci.org/senecajs/seneca-msgstats
 [gitter-badge]: https://badges.gitter.im/Join%20Chat.svg
 [gitter-url]: https://gitter.im/senecajs/seneca
 
@@ -100,5 +100,5 @@ Copyright Richard Rodger and other contributors 2015, Licensed under [MIT][].
 [Senecajs org]: https://github.com/senecajs/
 [Seneca.js]: https://www.npmjs.com/package/seneca
 [senecajs.org]: http://senecajs.org/
-[github issue]: https://github.com/rjrodger/seneca-msgstats/issues
+[github issue]: https://github.com/senecajs/seneca-msgstats/issues
 [@senecajs]: http://twitter.com/senecajs
