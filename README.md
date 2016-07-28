@@ -2,7 +2,6 @@
 > A [Seneca.js][] message stats producer and collector
 
 # seneca-msgstats
-[![Build Status][travis-badge]][travis-url]
 [![Gitter][gitter-badge]][gitter-url]
 
 A producer and collector of stats for [Seneca.js][]. This module generates metrics on an interval emits
@@ -11,7 +10,7 @@ Influxdb. Collectors work over UDP and can handle messages from other services.
 
 An example system with the nessecery docker configuration can be found in [/eg](./eg)
 
-- __Version:__ 0.1.0
+- __Version:__ 0.2.0
 - __Tested on:__ Seneca 0.7, 0.8, 0.9
 - __Node:__ 0.10, 0.12, 4
 - __License:__ [MIT][]
@@ -96,16 +95,13 @@ The [Senecajs org][] encourage open participation. If you feel you can help in a
 documentation, examples, extra testing, or new features please get in touch.
 
 ## License
-Copyright Richard Rodger and other contributors 2015, Licensed under [MIT][].
+Copyright Richard Rodger and other contributors 2014 - 2016, Licensed under [MIT][].
 
-[travis-badge]: https://travis-ci.org/senecajs/seneca-msgstats.svg
-[travis-url]: https://travis-ci.org/senecajs/seneca-msgstats
 [gitter-badge]: https://badges.gitter.im/Join%20Chat.svg
 [gitter-url]: https://gitter.im/senecajs/seneca
-
 [MIT]: ./LICENSE
 [Senecajs org]: https://github.com/senecajs/
 [Seneca.js]: https://www.npmjs.com/package/seneca
 [senecajs.org]: http://senecajs.org/
-[github issue]: https://github.com/senecajs/seneca-msgstats/issues
+[github issue]: https://github.com/senecajs-labs/seneca-msgstats/issues
 [@senecajs]: http://twitter.com/senecajs
